@@ -8,7 +8,7 @@
         "size": [1080, 1920]
     },
     "output": {
-        "file": "output/demo1.mp4",
+        "file": "output/demo.mp4",
         "fps": 30,
         "codec": "mpeg4",
         "bitrate": "10000k"
