@@ -3,12 +3,12 @@
     "name": "DANK MEMES",
     "memes_file": "assets/Info/memes.txt",
     "background": {
-        "location": "assets/Background/*",
+        "location": "assets/Background/MC_Parkour.webm",
         "aspect_ratio": [9, 16],
         "size": [1080, 1920]
     },
     "output": {
-        "file": "output/demo.mp4",
+        "file": "output/demo1.mp4",
         "fps": 30,
         "codec": "mpeg4",
         "bitrate": "10000k"
