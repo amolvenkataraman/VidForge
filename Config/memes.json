@@ -1,14 +1,14 @@
 {
     "command": "memes_simple",
     "name": "DANK MEMES",
-    "memes_file": "Assets/Info/memes.txt",
+    "memes_file": "assets/Info/memes.txt",
     "background": {
-        "location": "Assets/Background/*",
+        "location": "assets/Background/*",
         "aspect_ratio": [9, 16],
         "size": [1080, 1920]
     },
     "output": {
-        "file": "Output/demo1.mp4",
+        "file": "output/demo1.mp4",
         "fps": 30,
         "codec": "mpeg4",
         "bitrate": "10000k"

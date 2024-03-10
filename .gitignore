@@ -1,4 +1,4 @@
-Assets/*
-Temp/*
-Output/*
+assets/*
+output/*
+temp/*
 *.pyc

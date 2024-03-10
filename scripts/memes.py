@@ -38,4 +38,4 @@ def memes_simple(name, memes_file, background, output, threads: int=8, **kwargs)
     result = CompositeVideoClip([clip, video.set_position('center')])
     result.write_videofile(output["file"], fps=output["fps"], codec=output["codec"], bitrate=output["bitrate"], threads=threads)
 
-    clean_up("Temp/*")
+    clean_up("temp/*")
