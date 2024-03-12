@@ -1,3 +1,10 @@
+import random
+
+import cv2
+import praw
+import pytesseract
+from PIL import Image
+import numpy as np
 from moviepy.editor import *
 
 from lib.background import *
@@ -6,15 +13,17 @@ from lib.tts import *
 from lib.utils import *
 
 
-def memes_simple(name, memes_file, background, output, threads: int=8, **kwargs):
+def memes_simple(title, memes, background, output_file, render, **kwargs):
     # Make title splash and background TTS (ex. "DANK MEMES")
-    title_audio = AudioFileClip(make_brian_audio(name))
+    title_audio = AudioFileClip(make_brian_audio(title))
     title_splash = (
         TextClip(
-            name,
+            title,
             fontsize=100,
-            font='Cantarell-Bold',
+            stroke_width=4,
+            font='Impact-Regular',
             color='white',
+            stroke_color='black',
             method='caption',
             size=(background["size"][0] * 0.8, background["size"][1] * 0.3)
     ).set_position('center').set_duration(title_audio.duration + 1)).set_audio(title_audio)
@@ -23,21 +32,19 @@ def memes_simple(name, memes_file, background, output, threads: int=8, **kwargs)
     total_len = title_audio.duration
     clips = [title_splash]
 
-    # Open the file that has links to memes and captions
-    with open(memes_file, "r") as f:
-        for m in f.read().split("\n"): # Iterate through lines
-            ml, mc = m.rstrip().split("  ", 1)
-            # Make TTS background audio
-            aud = AudioFileClip(make_brian_audio(mc))
-            # Download image and make a clip of it
-            img = ImageClip(get_image_from_url(ml)) \
-                .set_duration(aud.duration + 1) \
-                .set_pos(("center","center")) \
-                .resize(width=background["size"][0] * 0.9) \
-                .set_audio(aud)
-            # Update length and clips list
-            total_len += img.duration
-            clips.append(img)
+    # Iterate through memes
+    for m in memes:
+        # Make TTS background audio
+        aud = AudioFileClip(make_brian_audio(m[1]))
+        # Download image and make a clip of it
+        img = ImageClip(get_image_from_path(m[0])) \
+            .set_duration(aud.duration + 1) \
+            .set_pos(("center","center")) \
+            .resize(width=background["size"][0] * 0.9) \
+            .set_audio(aud)
+        # Update length and clips list
+        total_len += img.duration
+        clips.append(img)
     
     # Concatenate all the foreground clips
     video = concatenate(clips, method="compose")
@@ -46,7 +53,104 @@ def memes_simple(name, memes_file, background, output, threads: int=8, **kwargs)
 
     # Compose the foreground and background to make a result and save it
     result = CompositeVideoClip([clip, video.set_position('center')])
-    result.write_videofile(output["file"], fps=output["fps"], codec=output["codec"], bitrate=output["bitrate"], threads=threads)
+
+    if "top_text" in kwargs.keys():
+        top_text = (
+            TextClip(
+                kwargs["top_text"]["text"],
+                fontsize=kwargs["top_text"]["size"],
+                font=kwargs["top_text"]["font"],
+                stroke_width=2,
+                color='white',
+                stroke_color='black',
+                method='caption',
+                size=(background["size"][0], background["size"][1] * 0.2)
+        ).set_position('top').set_duration(result.duration))
+        result = CompositeVideoClip([result, top_text])
+
+    if "bottom_text" in kwargs.keys():
+        bottom_text = (
+            TextClip(
+                kwargs["bottom_text"]["text"],
+                fontsize=kwargs["bottom_text"]["size"],
+                font=kwargs["bottom_text"]["font"],
+                stroke_width=2,
+                color='white',
+                stroke_color='black',
+                method='caption',
+                size=(background["size"][0], background["size"][1] * 0.2)
+        ).set_position('bottom').set_duration(result.duration))
+        result = CompositeVideoClip([result, bottom_text])
+
+    result.write_videofile(output_file, fps=render["fps"], codec=render["codec"], bitrate=render["bitrate"], threads=render["threads"])
 
     # Clean up any temporary files
     clean_up("temp/*")
+
+def memes_simple_file(title, memes_file, background, output_file, render, **kwargs):
+    # Open the file that has links to memes and captions
+    with open(memes_file, "r") as f:
+        memes = [m.rstrip().split("  ", 1) for m in f.read().split("\n")]
+
+    # Call the meme video generator
+    memes_simple(
+        title=title,
+        memes=memes,
+        background=background,
+        output_file=output_file,
+        render=render,
+        **kwargs
+    )
+
+def memes_simple_multiple(title, memes_file, vid_size, background, output_file, render, **kwargs):
+    # Open memes file, read lines and randomize the order
+    with open(memes_file, "r") as f:
+        lines = f.read().split("\n")
+        random.shuffle(lines)
+
+    # Generate the content of all the individual files
+    files = [lines[i:i + vid_size] for i in range(0, len(lines), vid_size)]
+
+    # Iterate through the files
+    for i, f in enumerate(files):
+        # Save the file in the temporary folder
+        fn = f"temp/MEME_{gen_randstr(6)}.txt"
+        with open(fn, "w") as ff:
+            ff.write("\n".join(f))
+
+        # Call the meme video generator
+        memes_simple_file(
+            title=title,
+            memes_file=fn,
+            background=background,
+            output_file=output_file.replace("%", i),
+            render=render,
+            **kwargs
+        )
+
+def preprocess_finale(im):
+    im= cv2.bilateralFilter(im,5, 55,60)
+    im = cv2.cvtColor(im, cv2.COLOR_BGR2GRAY)
+    _, im = cv2.threshold(im, 240, 255, 1)
+    return im
+
+def memes_simple_reddit(title, reddit, subreddit, vid_size, background, output_file, render, **kwargs):
+    reddit = praw.Reddit(**reddit)
+    memes = []
+    for m in list([i.url for i in reddit.subreddit(subreddit).hot(limit=vid_size)]):
+        try:
+            ml = get_image_from_path(m)
+            mc = pytesseract.image_to_string(preprocess_finale(np.array(Image.open(ml))))
+            if mc.rstrip() != "":
+                memes.append([ml, mc])
+        except: continue
+    
+    # Call the meme video generator
+    memes_simple(
+        title=title,
+        memes=memes,
+        background=background,
+        output_file=output_file,
+        render=render,
+        **kwargs
+    )

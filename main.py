@@ -5,9 +5,9 @@ import json
 import time
 import argparse
 
-from scripts.memes import memes_simple
+from scripts.memes import *
 
-RUNNABLE_SCRIPTS = ["memes_simple"]
+RUNNABLE_SCRIPTS = ["memes_simple", "memes_simple_file", "memes_simple_multiple", "memes_simple_reddit"]
 
 def run_command(conf):
     if conf["command"] in RUNNABLE_SCRIPTS:

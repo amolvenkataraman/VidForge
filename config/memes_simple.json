@@ -1,17 +1,27 @@
 {
-    "command": "memes_simple",
-    "name": "DANK MEMES",
+    "command": "memes_simple_file",
+    "title": "DANK MEMES",
     "memes_file": "assets/Info/memes.txt",
     "background": {
         "location": "assets/Background/MC_Parkour.webm",
         "aspect_ratio": [9, 16],
         "size": [1080, 1920]
     },
-    "output": {
-        "file": "output/demo1.mp4",
+    "output_file": "output/video.mp4",
+    "render": {
         "fps": 30,
         "codec": "mpeg4",
-        "bitrate": "10000k"
+        "bitrate": "10000k",
+        "threads": 12
     },
-    "threads": 12
+    "top_text": {
+        "text": "Please like and subscribe!",
+        "font": "Impact-Regular",
+        "size": 45
+    },
+    "bottom_text": {
+        "text": "Comment your favourite meme.",
+        "font": "Impact-Regular",
+        "size": 45
+    }
 }
