@@ -1,6 +1,5 @@
 {
     "command": "memes_simple_file",
-    "title": "DANK MEMES",
     "memes_file": "assets/Info/memes.txt",
     "background": {
         "location": "assets/Background/MC_Parkour.webm",
@@ -15,13 +14,13 @@
         "threads": 12
     },
     "top_text": {
-        "text": "Please like and subscribe!",
-        "font": "Impact-Regular",
-        "size": 45
+        "text": "DAILY MEMES - 16/03/2024",
+        "font": "Impact",
+        "size": 60
     },
     "bottom_text": {
-        "text": "Comment your favourite meme.",
-        "font": "Impact-Regular",
+        "text": "Please like and subscribe!",
+        "font": "Impact",
         "size": 45
     }
 }

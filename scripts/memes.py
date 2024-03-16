@@ -13,24 +13,41 @@ from lib.tts import *
 from lib.utils import *
 
 
-def memes_simple(title, memes, background, output_file, render, **kwargs):
-    # Make title splash and background TTS (ex. "DANK MEMES")
-    title_audio = AudioFileClip(make_brian_audio(title))
+def gen_title(title, size):
+    title_audio = AudioFileClip(make_brian_audio(title["text"]))
     title_splash = (
         TextClip(
-            title,
-            fontsize=100,
+            title["text"],
+            fontsize=title["size"],
             stroke_width=4,
-            font='Impact-Regular',
+            font=title["font"],
             color='white',
             stroke_color='black',
             method='caption',
-            size=(background["size"][0] * 0.8, background["size"][1] * 0.3)
-    ).set_position('center').set_duration(title_audio.duration + 1)).set_audio(title_audio)
-    
+            size=(size[0] * 0.8, size[1] * 0.3)
+    ).set_position('center').set_duration(title_audio.duration + title["wait_time"])).set_audio(title_audio)
+
+    return title_splash
+
+def gen_text(text, size, location, duration):
+    text = (
+        TextClip(
+            text["text"],
+            fontsize=text["size"],
+            font=text["font"],
+            stroke_width=2,
+            color='white',
+            stroke_color='black',
+            method='caption',
+            size=(size[0], size[1] * 0.2)
+    ).set_position(location).set_duration(duration))
+
+    return text
+
+def memes_simple(memes, background, output_file, render, **kwargs):
     # Keep a running tally of total video duration and a list of clips
-    total_len = title_audio.duration
-    clips = [title_splash]
+    total_len = 0
+    clips = []
 
     # Iterate through memes
     for m in memes:
@@ -38,48 +55,42 @@ def memes_simple(title, memes, background, output_file, render, **kwargs):
         aud = AudioFileClip(make_brian_audio(m[1]))
         # Download image and make a clip of it
         img = ImageClip(get_image_from_path(m[0])) \
-            .set_duration(aud.duration + 1) \
+            .set_duration(aud.duration + 0.5) \
             .set_pos(("center","center")) \
             .resize(width=background["size"][0] * 0.9) \
             .set_audio(aud)
         # Update length and clips list
         total_len += img.duration
         clips.append(img)
-    
+
+    if "front_title" in kwargs.keys():
+        # Add a splash title to the front if one is required
+        front_title_splash = gen_title(kwargs["front_title"], background["size"])
+
+        clips.insert(0, front_title_splash)
+        total_len += front_title_splash.duration
+
+    if "back_title" in kwargs.keys():
+        # Add a splash title to the back if one is required
+        back_title_splash = gen_title(kwargs["back_title"], background["size"])
+
+        clips.append(back_title_splash)
+        total_len += back_title_splash.duration
+
     # Concatenate all the foreground clips
     video = concatenate(clips, method="compose")
     # Generate a background clip
-    clip = crop_video(make_background_clip(total_len + 1, background["location"]), background["aspect_ratio"]).resize(tuple(background["size"]))
+    clip = crop_video(make_background_clip(total_len, background["location"]), background["aspect_ratio"]).resize(tuple(background["size"]))
 
     # Compose the foreground and background to make a result and save it
     result = CompositeVideoClip([clip, video.set_position('center')])
 
     if "top_text" in kwargs.keys():
-        top_text = (
-            TextClip(
-                kwargs["top_text"]["text"],
-                fontsize=kwargs["top_text"]["size"],
-                font=kwargs["top_text"]["font"],
-                stroke_width=2,
-                color='white',
-                stroke_color='black',
-                method='caption',
-                size=(background["size"][0], background["size"][1] * 0.2)
-        ).set_position('top').set_duration(result.duration))
+        top_text = gen_text(kwargs["top_text"], background["size"], "top", result.duration)
         result = CompositeVideoClip([result, top_text])
 
     if "bottom_text" in kwargs.keys():
-        bottom_text = (
-            TextClip(
-                kwargs["bottom_text"]["text"],
-                fontsize=kwargs["bottom_text"]["size"],
-                font=kwargs["bottom_text"]["font"],
-                stroke_width=2,
-                color='white',
-                stroke_color='black',
-                method='caption',
-                size=(background["size"][0], background["size"][1] * 0.2)
-        ).set_position('bottom').set_duration(result.duration))
+        bottom_text = gen_text(kwargs["bottom_text"], background["size"], "bottom", result.duration)
         result = CompositeVideoClip([result, bottom_text])
 
     result.write_videofile(output_file, fps=render["fps"], codec=render["codec"], bitrate=render["bitrate"], threads=render["threads"])
@@ -87,14 +98,13 @@ def memes_simple(title, memes, background, output_file, render, **kwargs):
     # Clean up any temporary files
     clean_up("temp/*")
 
-def memes_simple_file(title, memes_file, background, output_file, render, **kwargs):
+def memes_simple_file(memes_file, background, output_file, render, **kwargs):
     # Open the file that has links to memes and captions
     with open(memes_file, "r") as f:
         memes = [m.rstrip().split("  ", 1) for m in f.read().split("\n")]
 
     # Call the meme video generator
     memes_simple(
-        title=title,
         memes=memes,
         background=background,
         output_file=output_file,
@@ -102,7 +112,7 @@ def memes_simple_file(title, memes_file, background, output_file, render, **kwar
         **kwargs
     )
 
-def memes_simple_multiple(title, memes_file, vid_size, background, output_file, render, **kwargs):
+def memes_simple_multiple(memes_file, vid_size, background, output_file, render, **kwargs):
     # Open memes file, read lines and randomize the order
     with open(memes_file, "r") as f:
         lines = f.read().split("\n")
@@ -134,7 +144,7 @@ def preprocess_finale(im):
     _, im = cv2.threshold(im, 240, 255, 1)
     return im
 
-def memes_simple_reddit(title, reddit, subreddit, vid_size, background, output_file, render, **kwargs):
+def memes_simple_reddit(reddit, subreddit, vid_size, background, output_file, render, **kwargs):
     reddit = praw.Reddit(**reddit)
     memes = []
     for m in list([i.url for i in reddit.subreddit(subreddit).hot(limit=vid_size)]):
@@ -147,7 +157,6 @@ def memes_simple_reddit(title, reddit, subreddit, vid_size, background, output_f
     
     # Call the meme video generator
     memes_simple(
-        title=title,
         memes=memes,
         background=background,
         output_file=output_file,
