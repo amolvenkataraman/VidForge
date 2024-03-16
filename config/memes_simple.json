@@ -2,7 +2,7 @@
     "command": "memes_simple_file",
     "memes_file": "assets/Info/memes.txt",
     "background": {
-        "location": "assets/Background/MC_Parkour.webm",
+        "location": "assets/Background/IRL/*",
         "aspect_ratio": [9, 16],
         "size": [1080, 1920]
     },

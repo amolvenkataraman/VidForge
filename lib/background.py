@@ -32,7 +32,7 @@ def crop_video(clip, ar: list):
 def make_background_clip(length: float, path: str):
     fp = random.choice(glob.glob(f"{os.getcwd()}/{path}"))
 
-    clip = VideoFileClip(fp)
+    clip = VideoFileClip(fp).set_audio(None)
     loc = random.randint(1, math.floor(clip.duration) - math.ceil(length) - 1)
     clip = clip.subclip(loc, loc + length)
 
